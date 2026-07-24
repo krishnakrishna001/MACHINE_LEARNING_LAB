@@ -1,0 +1,1 @@
+A collection of Machine Learning Laboratory experiments implemented in Python using Scikit-learn, NumPy, Pandas, and Matplotlib. Includes data preprocessing, model training, evaluation, and practical ML algorithms for academic learning.
