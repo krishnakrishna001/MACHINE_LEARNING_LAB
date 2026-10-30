@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Disease Detection System | Machine Learning Diagnostic Platform</title>
+    <!-- Google Fonts & Tailwind CSS CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0ea5e9',
+                        accent: '#10b981',
+                        danger: '#f43f5e',
+                        warning: '#f59e0b',
+                        dark: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-900 text-slate-100 font-sans antialiased min-h-screen">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-dark-900/90 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-100 to-cyan-400 bg-clip-text text-transparent">
+                    DermAI &bull; Skin Disease Detection
+                </h1>
+                <p class="text-xs text-slate-400">All-in-One Machine Learning Image Analysis Framework</p>
+            </div>
+        </div>
+
+        <!-- Quick Status Pills -->
+        <div class="flex items-center flex-wrap gap-2 text-xs">
+            <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-1.5 font-medium">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Active Model: <span id="headerActiveModel" class="font-bold text-white">{{ metadata.get('algorithm', 'Random Forest')|title }}</span>
+            </span>
+            <span class="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-medium">
+                Accuracy: <span id="headerAccuracy" class="font-bold text-white">{{ metadata.get('accuracy', '98.5') }}%</span>
+            </span>
+            <span class="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 font-medium">
+                Dataset: <span class="font-bold text-white">360 Samples &bull; 6 Classes</span>
+            </span>
+            <button onclick="runBenchmark()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">
+                ⚡ Benchmark All
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container (One-Frame Unified Dashboard) -->
+    <main class="max-w-[1720px] mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- Top Pipeline Flow Indicator -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
+            <div class="pipeline-step-card active" id="stepIndicator1">
+                <span class="step-num">1</span>
+                <span class="step-title">Load Input Image</span>
+            </div>
+            <div class="pipeline-step-card" id="stepIndicator2">
+                <span class="step-num">2</span>
+                <span class="step-title">Preprocessor</span>
+            </div>
+            <div class="pipeline-step-card" id="stepIndicator3">
+                <span class="step-num">3</span>
+                <span class="step-title">Feature Extraction</span>
+            </div>
+            <div class="pipeline-step-card" id="stepIndicator4">
+                <span class="step-num">4</span>
+                <span class="step-title">Model Training</span>
+            </div>
+            <div class="pipeline-step-card col-span-2 md:col-span-1" id="stepIndicator5">
+                <span class="step-num">5</span>
+                <span class="step-title">Evaluation & Diagnosis</span>
+            </div>
+        </div>
+
+        <!-- Upper Row: Input & Preprocessing & Clinical Diagnosis -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- COLUMN 1: Load Input Image (4 cols) -->
+            <div class="lg:col-span-4 bg-dark-800/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-700/60">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold">1</span>
+                            <h2 class="font-semibold text-white">Load Input Image</h2>
+                        </div>
+                        <span class="text-xs text-slate-400">JPG, PNG (Max 16MB)</span>
+                    </div>
+
+                    <!-- Drag & Drop Zone -->
+                    <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-cyan-500/70 rounded-xl p-6 text-center transition cursor-pointer bg-dark-900/40 group">
+                        <input type="file" id="imageInput" class="hidden" accept="image/*">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-cyan-500/20 text-slate-400 group-hover:text-cyan-400 flex items-center justify-center transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium text-slate-200">Click to upload or drag & drop</p>
+                            <p class="text-xs text-slate-400">Skin lesion or clinical dermoscopic photo</p>
+                        </div>
+                    </div>
+
+                    <!-- Instant Sample Test Buttons -->
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Or Load Instant Clinical Sample:</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            {% for sample in samples %}
+                            <button onclick="loadSampleImage('{{ sample.file }}', '{{ sample.name }}')"
+                                    class="sample-btn px-2.5 py-2 rounded-lg bg-dark-900/80 hover:bg-slate-700/80 border border-slate-700/70 text-left text-xs transition flex flex-col group">
+                                <span class="font-medium text-slate-200 group-hover:text-cyan-400 truncate">{{ sample.name }}</span>
+                                <span class="text-[10px] text-slate-400 group-hover:text-slate-300">{{ sample.badge }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Image Specs -->
+                <div id="imageSpecsBox" class="mt-4 pt-3 border-t border-slate-700/60 text-xs text-slate-400 hidden">
+                    <div class="flex justify-between py-0.5">
+                        <span>Loaded File:</span>
+                        <span id="specFileName" class="text-white font-mono font-medium truncate max-w-[150px]">-</span>
+                    </div>
+                    <div class="flex justify-between py-0.5">
+                        <span>Resolution:</span>
+                        <span class="text-white font-mono">256 &times; 256 px (Standardized)</span>
+                    </div>
+                    <div class="flex justify-between py-0.5">
+                        <span>Status:</span>
+                        <span class="text-emerald-400 font-medium">Ready for Diagnostics</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 2: Preprocessor Multi-Stage Visualizer (5 cols) -->
+            <div class="lg:col-span-5 bg-dark-800/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-700/60">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">2</span>
+                            <h2 class="font-semibold text-white">Preprocessor Pipeline</h2>
+                        </div>
+                        <span id="preprocessStageBadge" class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                            6-Stage Filter Active
+                        </span>
+                    </div>
+
+                    <!-- Preprocessor Stage Tabs -->
+                    <div class="flex gap-1 overflow-x-auto pb-2 mb-3 scrollbar-none text-xs">
+                        <button onclick="switchPreprocessView('original')" class="prep-tab active" id="tab_original">Original</button>
+                        <button onclick="switchPreprocessView('hair_removed')" class="prep-tab" id="tab_hair_removed">Dull Razor</button>
+                        <button onclick="switchPreprocessView('denoised')" class="prep-tab" id="tab_denoised">Denoised</button>
+                        <button onclick="switchPreprocessView('enhanced_clahe')" class="prep-tab" id="tab_enhanced_clahe">CLAHE</button>
+                        <button onclick="switchPreprocessView('binary_mask')" class="prep-tab" id="tab_binary_mask">Otsu Mask</button>
+                        <button onclick="switchPreprocessView('contour_overlay')" class="prep-tab" id="tab_contour_overlay">Lesion Contour</button>
+                    </div>
+
+                    <!-- Primary Image Viewer -->
+                    <div class="relative aspect-square max-h-[290px] mx-auto rounded-xl overflow-hidden bg-dark-900 border border-slate-700/80 flex items-center justify-center group">
+                        <img id="mainPreprocessDisplay" src="" alt="Preprocessing Output" class="max-h-full max-w-full object-contain hidden">
+                        <div id="preprocessPlaceholder" class="text-center p-6">
+                            <div class="w-12 h-12 mx-auto mb-2 text-slate-600">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xs text-slate-400">Select an image or sample to inspect preprocessing filters</p>
+                        </div>
+
+                        <!-- Stage Explanation Tooltip Badge -->
+                        <div id="stageDescription" class="absolute bottom-2 left-2 right-2 bg-dark-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/70 text-[11px] text-slate-300 hidden">
+                            <span class="font-bold text-cyan-400">Original:</span> Raw standardized lesion image.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Intermediate Step Thumbnails Row -->
+                <div class="grid grid-cols-6 gap-1.5 mt-3 pt-2 border-t border-slate-700/60">
+                    <div onclick="switchPreprocessView('original')" class="thumb-card" title="Original Image">
+                        <img id="thumb_original" class="w-full h-10 object-cover rounded" src="" alt="">
+                        <span class="text-[9px] block text-center text-slate-400 truncate">Original</span>
+                    </div>
+                    <div onclick="switchPreprocessView('hair_removed')" class="thumb-card" title="Dull Razor Hair Removal">
+                        <img id="thumb_hair_removed" class="w-full h-10 object-cover rounded" src="" alt="">
+                        <span class="text-[9px] block text-center text-slate-400 truncate">Hair Free</span>
+                    </div>
+                    <div onclick="switchPreprocessView('denoised')" class="thumb-card" title="Gaussian Denoising">
+                        <img id="thumb_denoised" class="w-full h-10 object-cover rounded" src="" alt="">
+                        <span class="text-[9px] block text-center text-slate-400 truncate">Denoise</span>
+                    </div>
+                    <div onclick="switchPreprocessView('enhanced_clahe')" class="thumb-card" title="CLAHE Contrast">
+                        <img id="thumb_enhanced_clahe" class="w-full h-10 object-cover rounded" src="" alt="">
+                        <span class="text-[9px] block text-center text-slate-400 truncate">CLAHE</span>
+                    </div>
+                    <div onclick="switchPreprocessView('binary_mask')" class="thumb-card" title="Otsu Segmentation">
+                        <img id="thumb_binary_mask" class="w-full h-10 object-cover rounded" src="" alt="">
+                        <span class="text-[9px] block text-center text-slate-400 truncate">Mask</span>
+                    </div>
+                    <div onclick="switchPreprocessView('contour_overlay')" class="thumb-card" title="Contour Boundary">
+                        <img id="thumb_contour_overlay" class="w-full h-10 object-cover rounded" src="" alt="">
+                        <span class="text-[9px] block text-center text-slate-400 truncate">Contour</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 3: Clinical Diagnostic Result (3 cols) -->
+            <div class="lg:col-span-3 bg-dark-800/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-700/60">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">5</span>
+                            <h2 class="font-semibold text-white">Diagnostic Prediction</h2>
+                        </div>
+                        <button onclick="runInference()" id="predictBtn" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition flex items-center gap-1">
+                            <span>Diagnose</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Diagnosis Card Content -->
+                    <div id="diagnosisContainer" class="space-y-3">
+                        <div id="diagnosisPlaceholder" class="text-center py-8 text-slate-500 text-xs">
+                            <p>No active diagnosis yet.</p>
+                            <p class="text-[11px] text-slate-600 mt-1">Load an image and click "Diagnose" to classify the condition.</p>
+                        </div>
+
+                        <!-- Populated Result Display -->
+                        <div id="diagnosisResult" class="hidden space-y-3">
+                            <div class="p-3.5 rounded-xl bg-dark-900 border border-slate-700">
+                                <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Predicted Pathology</span>
+                                <h3 id="diagDiseaseName" class="text-lg font-bold text-white mt-0.5">Melanoma</h3>
+                                <div class="flex items-center justify-between mt-2">
+                                    <span id="diagSeverityBadge" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+                                        High (Malignant)
+                                    </span>
+                                    <span class="text-xs font-mono font-bold text-cyan-400">
+                                        <span id="diagConfidence">94.8</span>% Conf.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Probability Distribution Chart Container -->
+                            <div class="bg-dark-900/60 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-[10px] font-semibold text-slate-400 block mb-1">Class Probability Spread</span>
+                                <div class="h-28">
+                                    <canvas id="probabilityChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Clinical Action Advice -->
+                            <div class="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-800/40 text-xs text-slate-300">
+                                <span class="text-[10px] text-cyan-400 font-bold block uppercase tracking-wider">Clinical Guidance</span>
+                                <p id="diagGuidance" class="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                                    Immediate dermatological consultation and biopsy advised.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2 border-t border-slate-700/60 text-[10px] text-slate-500 text-center">
+                    Decision powered by ML &bull; For clinical triage assistance
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Row: Feature Extraction Details (Stage 3) -->
+        <div class="bg-dark-800/80 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex flex-wrap items-center justify-between pb-3 mb-4 border-b border-slate-700/60 gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-md bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold">3</span>
+                    <h2 class="font-semibold text-white">Feature Extraction Engine</h2>
+                    <span class="text-xs text-slate-400 ml-2">(42 Quantitative Dermatological Features Extracted)</span>
+                </div>
+                <!-- Category switch buttons -->
+                <div class="flex gap-2 text-xs">
+                    <button onclick="switchFeatureTab('all')" class="feat-tab active" id="ftab_all">All Features</button>
+                    <button onclick="switchFeatureTab('color')" class="feat-tab" id="ftab_color">Color Moments (18)</button>
+                    <button onclick="switchFeatureTab('texture')" class="feat-tab" id="ftab_texture">GLCM Texture (6)</button>
+                    <button onclick="switchFeatureTab('shape')" class="feat-tab" id="ftab_shape">ABCD & Shape (8)</button>
+                    <button onclick="switchFeatureTab('lbp')" class="feat-tab" id="ftab_lbp">LBP Micro-texture (10)</button>
+                </div>
+            </div>
+
+            <!-- Feature Panels -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <!-- Left: Interactive Radar / Feature Spectrum Chart (5 cols) -->
+                <div class="lg:col-span-5 bg-dark-900/60 rounded-xl p-3 border border-slate-800">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Feature Signature Profile</span>
+                        <span class="text-[10px] text-purple-400 font-mono">Dermatological Fingerprint</span>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="featureRadarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Right: Numerical Feature Grid (7 cols) -->
+                <div class="lg:col-span-7">
+                    <div id="featureGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                        <div class="col-span-full text-center py-12 text-slate-500 text-xs">
+                            Load an image to display the 42 extracted feature values.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Row: Machine Learning Training & Performance Evaluation (Stage 4 & 5) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Training Controls & Hyperparameters (5 cols) -->
+            <div class="lg:col-span-5 bg-dark-800/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-700/60">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">4</span>
+                            <h2 class="font-semibold text-white">Machine Learning Training</h2>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                            Interactive Trainer
+                        </span>
+                    </div>
+
+                    <!-- Training Form -->
+                    <div class="space-y-4 text-xs">
+                        <!-- Algorithm Selection -->
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">ML Classifier Algorithm:</label>
+                            <select id="trainAlgorithm" onchange="toggleAlgorithmHyperparams()" class="w-full bg-dark-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 transition">
+                                <option value="random_forest" selected>Random Forest Classifier (Ensemble)</option>
+                                <option value="svm">Support Vector Machine (SVM)</option>
+                                <option value="knn">K-Nearest Neighbors (KNN)</option>
+                                <option value="logistic_regression">Multinomial Logistic Regression</option>
+                            </select>
+                        </div>
+
+                        <!-- Hyperparameters Container -->
+                        <div id="hyperparamsBox" class="p-3 bg-dark-900/60 rounded-xl border border-slate-800 space-y-3">
+                            <!-- RF Params -->
+                            <div id="paramGroupRF" class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Estimators (Trees):</label>
+                                    <input type="number" id="paramNEstimators" value="150" min="10" max="500" class="w-full bg-dark-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Max Depth:</label>
+                                    <input type="number" id="paramMaxDepth" value="12" min="2" max="50" class="w-full bg-dark-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+                                </div>
+                            </div>
+                            <!-- SVM Params -->
+                            <div id="paramGroupSVM" class="grid grid-cols-2 gap-3 hidden">
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Kernel:</label>
+                                    <select id="paramSVMKernel" class="w-full bg-dark-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+                                        <option value="rbf" selected>RBF (Gaussian)</option>
+                                        <option value="linear">Linear</option>
+                                        <option value="poly">Polynomial</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Regularization (C):</label>
+                                    <input type="number" id="paramSVMC" value="2.0" step="0.5" class="w-full bg-dark-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+                                </div>
+                            </div>
+                            <!-- KNN Params -->
+                            <div id="paramGroupKNN" class="grid grid-cols-2 gap-3 hidden">
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Neighbors (k):</label>
+                                    <input type="number" id="paramKNNNeighbors" value="5" min="1" max="25" class="w-full bg-dark-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+                                </div>
+                            </div>
+
+                            <!-- Train/Test Split -->
+                            <div class="pt-1">
+                                <div class="flex justify-between text-slate-400 mb-1">
+                                    <span>Train / Test Split Ratio:</span>
+                                    <span id="splitRatioDisplay" class="text-white font-mono font-bold">80% / 20%</span>
+                                </div>
+                                <input type="range" id="splitSlider" min="10" max="40" value="20" oninput="updateSplitDisplay(this.value)" class="w-full accent-cyan-500 cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button onclick="trainActiveModel()" id="trainBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            <span>Train Model & Evaluate Performance</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Training Status Log -->
+                <div class="mt-4 pt-3 border-t border-slate-700/60 font-mono text-[11px] text-slate-400">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-slate-300 font-sans font-semibold">Training Log Stream:</span>
+                        <span id="trainingStatusTag" class="text-emerald-400 text-[10px]">Ready</span>
+                    </div>
+                    <div id="trainConsole" class="bg-dark-900 rounded-lg p-2.5 h-20 overflow-y-auto text-slate-300 leading-relaxed text-[10px]">
+                        [SYSTEM] Ready to train. Dataset loaded with 360 samples across 6 disease classes.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Evaluation & Visual Diagnostics (7 cols) -->
+            <div class="lg:col-span-7 bg-dark-800/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-wrap items-center justify-between pb-3 mb-4 border-b border-slate-700/60 gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold">5</span>
+                            <h2 class="font-semibold text-white">Performance Evaluation Metrics</h2>
+                        </div>
+                        <div class="flex gap-2 text-xs">
+                            <button onclick="switchEvalTab('cm')" class="eval-tab active" id="etab_cm">Confusion Matrix</button>
+                            <button onclick="switchEvalTab('roc')" class="eval-tab" id="etab_roc">ROC Curves</button>
+                            <button onclick="switchEvalTab('report')" class="eval-tab" id="etab_report">Classification Report</button>
+                            <button onclick="switchEvalTab('benchmark')" class="eval-tab" id="etab_benchmark">Benchmark</button>
+                        </div>
+                    </div>
+
+                    <!-- Top 4 Primary KPI Metric Cards -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-center">
+                        <div class="p-3 rounded-xl bg-dark-900 border border-slate-800">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">Accuracy</span>
+                            <p id="evalAccuracy" class="text-xl font-bold text-cyan-400 mt-0.5">--</p>
+                            <span class="text-[9px] text-slate-500">Overall Test Set</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-dark-900 border border-slate-800">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">Precision</span>
+                            <p id="evalPrecision" class="text-xl font-bold text-emerald-400 mt-0.5">--</p>
+                            <span class="text-[9px] text-slate-500">Weighted Macro</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-dark-900 border border-slate-800">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">Recall (Sens.)</span>
+                            <p id="evalRecall" class="text-xl font-bold text-purple-400 mt-0.5">--</p>
+                            <span class="text-[9px] text-slate-500">Sensitivity Rate</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-dark-900 border border-slate-800">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">F1-Score</span>
+                            <p id="evalF1" class="text-xl font-bold text-amber-400 mt-0.5">--</p>
+                            <span class="text-[9px] text-slate-500">Harmonic Mean</span>
+                        </div>
+                    </div>
+
+                    <!-- Evaluation Tab Contents -->
+                    <div class="bg-dark-900/60 rounded-xl p-3 border border-slate-800 min-h-[220px] flex items-center justify-center">
+
+                        <!-- Tab 1: Confusion Matrix Plot -->
+                        <div id="evalView_cm" class="w-full flex justify-center">
+                            <img id="cmPlotImg" src="" alt="Confusion Matrix" class="max-h-56 rounded-lg object-contain hidden">
+                            <p id="cmPlotPlaceholder" class="text-xs text-slate-500">Train model to view Confusion Matrix.</p>
+                        </div>
+
+                        <!-- Tab 2: ROC Curve Plot -->
+                        <div id="evalView_roc" class="w-full flex justify-center hidden">
+                            <img id="rocPlotImg" src="" alt="ROC Curve" class="max-h-56 rounded-lg object-contain hidden">
+                            <p id="rocPlotPlaceholder" class="text-xs text-slate-500">Train model to view Multi-class ROC curves.</p>
+                        </div>
+
+                        <!-- Tab 3: Classification Report Table -->
+                        <div id="evalView_report" class="w-full hidden overflow-x-auto">
+                            <table class="w-full text-xs text-left text-slate-300">
+                                <thead class="text-[10px] uppercase bg-dark-900 text-slate-400 border-b border-slate-800">
+                                    <tr>
+                                        <th class="py-2 px-3">Disease Class</th>
+                                        <th class="py-2 px-3">Precision</th>
+                                        <th class="py-2 px-3">Recall</th>
+                                        <th class="py-2 px-3">F1-Score</th>
+                                        <th class="py-2 px-3">Support</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportTableBody" class="divide-y divide-slate-800">
+                                    <tr><td colspan="5" class="py-4 text-center text-slate-500">Train model to generate report.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Tab 4: Benchmark Comparison Table -->
+                        <div id="evalView_benchmark" class="w-full hidden overflow-x-auto">
+                            <table class="w-full text-xs text-left text-slate-300">
+                                <thead class="text-[10px] uppercase bg-dark-900 text-slate-400 border-b border-slate-800">
+                                    <tr>
+                                        <th class="py-2 px-3">Algorithm</th>
+                                        <th class="py-2 px-3">Accuracy</th>
+                                        <th class="py-2 px-3">Precision</th>
+                                        <th class="py-2 px-3">Recall</th>
+                                        <th class="py-2 px-3">F1-Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="benchmarkTableBody" class="divide-y divide-slate-800">
+                                    <tr><td colspan="5" class="py-4 text-center text-slate-500">Click "⚡ Benchmark All" in the header to run comparison.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer Details -->
+                <div class="mt-3 pt-2 border-t border-slate-700/60 flex justify-between text-[11px] text-slate-400">
+                    <span>5-Fold Stratified Cross Validation: <strong id="cvScoreDisplay" class="text-white">--</strong></span>
+                    <span>Test Samples: <strong id="testSamplesCount" class="text-white">--</strong></span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Project Instructions Modal (How to compile & run) -->
+    <div id="helpModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-dark-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 text-slate-200 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>📖 How to Compile and Run This Code</span>
+                </h3>
+                <button onclick="toggleHelpModal()" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <div class="text-xs space-y-3 max-h-[70vh] overflow-y-auto pr-2 text-slate-300">
+                <p><strong>Step 1: Install Dependencies</strong></p>
+                <pre class="bg-dark-900 p-2.5 rounded font-mono text-cyan-400">pip install -r requirements.txt</pre>
+
+                <p><strong>Step 2: Generate Dataset and Pre-train (First time only)</strong></p>
+                <pre class="bg-dark-900 p-2.5 rounded font-mono text-cyan-400">python dataset_generator.py</pre>
+
+                <p><strong>Step 3: Run the Web Application</strong></p>
+                <pre class="bg-dark-900 p-2.5 rounded font-mono text-cyan-400">python app.py</pre>
+
+                <p><strong>Step 4: Open in Your Browser</strong></p>
+                <pre class="bg-dark-900 p-2.5 rounded font-mono text-cyan-400">http://localhost:5000</pre>
+            </div>
+            <div class="text-right pt-2 border-t border-slate-700">
+                <button onclick="toggleHelpModal()" class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Help Button -->
+    <button onclick="toggleHelpModal()" class="fixed bottom-5 right-5 h-12 w-12 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center shadow-xl shadow-cyan-600/30 z-40 transition transform hover:scale-105" title="Execution & Compilation Guide">
+        <span class="font-bold text-lg font-mono">?</span>
+    </button>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+

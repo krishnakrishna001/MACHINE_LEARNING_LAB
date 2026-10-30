@@ -1,0 +1,150 @@
+/* style.css - Custom styling for DermAI Skin Disease Detection Platform */
+
+/* Pipeline Step Indicators */
+.pipeline-step-card {
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.25s ease;
+}
+
+.pipeline-step-card .step-num {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background: rgba(51, 65, 85, 0.8);
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.pipeline-step-card .step-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.pipeline-step-card.active {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: rgba(14, 165, 233, 0.5);
+    box-shadow: 0 4px 15px rgba(14, 165, 233, 0.15);
+}
+
+.pipeline-step-card.active .step-num {
+    background: #0ea5e9;
+    color: #ffffff;
+}
+
+.pipeline-step-card.active .step-title {
+    color: #ffffff;
+}
+
+/* Preprocessor Tabs */
+.prep-tab {
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    background: rgba(15, 23, 42, 0.8);
+    color: #94a3b8;
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.prep-tab:hover {
+    background: rgba(51, 65, 85, 0.7);
+    color: #ffffff;
+}
+
+.prep-tab.active {
+    background: #0ea5e9;
+    border-color: #0ea5e9;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Feature & Eval Tabs */
+.feat-tab, .eval-tab {
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.5rem;
+    background: rgba(15, 23, 42, 0.8);
+    color: #94a3b8;
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.feat-tab:hover, .eval-tab:hover {
+    background: rgba(51, 65, 85, 0.7);
+    color: #ffffff;
+}
+
+.feat-tab.active, .eval-tab.active {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.eval-tab.active {
+    background: #f43f5e;
+    border-color: #f43f5e;
+}
+
+/* Thumbnail cards */
+.thumb-card {
+    cursor: pointer;
+    border: 1px solid rgba(51, 65, 85, 0.7);
+    border-radius: 0.4rem;
+    padding: 2px;
+    background: rgba(11, 15, 25, 0.6);
+    transition: all 0.2s ease;
+}
+
+.thumb-card:hover {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(51, 65, 85, 0.8);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 1);
+}
+
+/* Pulse animation for active diagnosis glow */
+@keyframes lesion-pulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(14, 165, 233, 0.45);
+    }
+}
+
+.lesion-glow {
+    animation: lesion-pulse 2.5s infinite;
+}
+
